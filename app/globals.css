@@ -1,20 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000;
+  --card-color: #131313;
+  --input-color: #1a1a1a;
+  --select-color: #151515;
+  --input-hover-color: #1e1e1e;
+  --select-hover-color: #191919;
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-select-color: #393939;
+  --foreground: #fff;
+  --primary: #171eaa;
+  --text-secondary: #ffffffa6;
+  --text-placeholder: #ffffff61;
+  --accent-purple: #cab1f4;
+  --accent-blue: #0E76FD;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-dm-sans: var(--font-dm-sans)
+  --color-primary: var(--primary);
+  --color-secondary: var(--text-secondary);
+  --color-card: var(--card-color);
+  --color-input: var(--input-color);
+  --color-input-hover: var(--input-hover-color);
+  --color-border-input: var(--border-color);
+  --color-border-select: var(--border-select-color);
+  --color-select: var(--select-color);
+  --color-select-hover: var(--select-hover-color);
+  --color-placeholder: var(--text-placeholder);
+  --font-dm-sans: var(--font-dm-sans);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #000;
+    --foreground: #fff;
   }
 }
 
@@ -22,4 +44,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.blur-gradient {
+  @apply absolute rounded-full bg-linear-to-br from-[#171eaa] via-[#0E76FD] to-[#cab1f4] pointer-events-none blur-[150px] h-[600px] w-[600px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0
 }
