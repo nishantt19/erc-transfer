@@ -1,46 +1,25 @@
 "use client";
-import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 
-import { TransferFormValues, transferSchema } from "@/schema/transferSchema";
-import { type Token } from "@/types";
+import { TransferFormValues } from "@/schema/transferSchema";
 
-import Input from "@/components/ui/Input";
+import { TokenAmountInput, AddressInput } from "@/components/main/input";
+import { useTransferForm } from "@/hooks/useTransferForm";
 
 const TransferCard = () => {
   const { isConnected } = useAccount();
-  const [token, setToken] = useState<Token | null>(null);
-
   const {
+    token,
+    handleTokenSelect,
     handleSubmit,
     register,
     setValue,
-    reset,
     formState: { errors },
-  } = useForm<TransferFormValues>({
-    resolver: zodResolver(transferSchema),
-    defaultValues: {
-      recipient: "",
-      amount: "",
-      tokenAddress: "",
-    },
-    mode: "all",
-  });
+    getValues,
+    control,
+  } = useTransferForm();
 
   const selectedToken = isConnected ? token : null;
-
-  useEffect(() => {
-    if (!isConnected) {
-      reset();
-    }
-  }, [isConnected, reset]);
-
-  const handleTokenSelect = (token: Token) => {
-    setToken(token);
-    setValue("tokenAddress", token.token_address, { shouldValidate: true });
-  };
 
   const onSubmit = (data: TransferFormValues) => {
     console.log("Form submitted:", data);
@@ -53,17 +32,19 @@ const TransferCard = () => {
       className="w-full bg-card rounded-3xl p-2.5 flex flex-col gap-y-2.5"
     >
       <div className="flex flex-col gap-y-2">
-        <Input
-          showBalance
+        <TokenAmountInput
           label="Amount"
           placeholder="0"
-          showSelectToken={true}
           register={register("amount")}
           error={errors.amount?.message}
           selectedToken={selectedToken}
           onTokenSelect={handleTokenSelect}
+          setValue={setValue}
+          fieldName="amount"
+          getValues={getValues}
+          control={control}
         />
-        <Input
+        <AddressInput
           label="Recipient Address"
           placeholder="0x..."
           register={register("recipient")}

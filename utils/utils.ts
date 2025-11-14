@@ -1,3 +1,4 @@
+import { type Token } from "@/types";
 import { type Address } from "viem";
 
 function hashStringToNumber(str: string) {
@@ -41,3 +42,10 @@ export function truncateAddress(address: Address, length: number = 4): string {
   const end = address.slice(-length);
   return `${start}...${end}`;
 }
+
+export const calculateUsdValue = (amount: string, selectedToken: Token) => {
+  if (!selectedToken || !amount || isNaN(Number(amount))) return "0.00";
+
+  const usdValue = Number(amount) * Number(selectedToken.usd_price);
+  return usdValue.toFixed(2);
+};

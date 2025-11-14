@@ -15,6 +15,7 @@
   --text-placeholder: #ffffff61;
   --accent-purple: #cab1f4;
   --accent-blue: #0E76FD;
+  --destructive: #ef4444;
 }
 
 @theme inline {
@@ -22,6 +23,7 @@
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-secondary: var(--text-secondary);
+  --color-destructive: var(--destructive);
   --color-card: var(--card-color);
   --color-input: var(--input-color);
   --color-input-hover: var(--input-hover-color);
