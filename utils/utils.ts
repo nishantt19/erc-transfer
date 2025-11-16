@@ -1,5 +1,6 @@
 import { type Token } from "@/types";
-import { type Address } from "viem";
+import { parseUnits, formatUnits, type Address } from "viem";
+import { BIGINT_ZERO, GAS_CONSTANTS } from "./constants";
 
 function hashStringToNumber(str: string) {
   let hash = 0;
@@ -23,11 +24,12 @@ export function stringToGradient(str: string) {
 }
 
 export function formatBalance(
-  balance: string | number,
+  balance: bigint | string | number,
   decimals: number,
   maxDecimals: number = 4
 ): string {
-  const numericBalance = Number(balance) / 10 ** decimals;
+  const balanceString = formatUnits(BigInt(balance), decimals);
+  const numericBalance = parseFloat(balanceString);
 
   if (numericBalance === 0) return "0";
 
@@ -49,3 +51,27 @@ export const calculateUsdValue = (amount: string, selectedToken: Token) => {
   const usdValue = Number(amount) * Number(selectedToken.usd_price);
   return usdValue.toFixed(2);
 };
+
+export function calculateRequiredGasAmount(
+  gasEstimate: bigint,
+  gasPrice: bigint
+): bigint {
+  const gasCost = gasEstimate * gasPrice;
+  const percentBuffer = gasCost / GAS_CONSTANTS.BUFFER_PERCENT;
+  const minimumBuffer = parseUnits(
+    GAS_CONSTANTS.MINIMUM_BUFFER_NATIVE_TOKEN,
+    GAS_CONSTANTS.NATIVE_TOKEN_DECIMALS
+  );
+
+  const buffer = percentBuffer > minimumBuffer ? percentBuffer : minimumBuffer;
+  return gasCost + buffer;
+}
+
+export function computeMaxNativeInput(
+  balance: bigint,
+  gasAmount: bigint
+): bigint {
+  const max = balance - gasAmount;
+
+  return max > BIGINT_ZERO ? max : BIGINT_ZERO;
+}

@@ -9,14 +9,17 @@ import {
   useWatch,
 } from "react-hook-form";
 import { ArrowDown2 } from "iconsax-react";
-import { motion, AnimatePresence } from "framer-motion";
 
-import { calculateUsdValue, formatBalance } from "@/utils/utils";
+import { computeMaxNativeInput } from "@/utils/utils";
 import { type Token } from "@/types";
 
 import { TokenAvatar, TokenSelectModal } from "@/components/main/token";
 import { InputWrapper } from "@/components/ui/InputWrapper";
 import { type TransferFormValues } from "@/schema/transferSchema";
+import { useTokenBalance } from "@/hooks/useTokenBalance";
+import { useGasEstimation } from "@/hooks/useGasEstimation";
+import { formatUnits } from "viem";
+import { PercentageButtons } from "@/components/main/input/PercentageButtons";
 
 type TokenAmountInputProps = {
   label: string;
@@ -43,32 +46,44 @@ const TokenAmountInput = ({
   getValues,
   control,
 }: TokenAmountInputProps) => {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const amount = useWatch({ name: fieldName, control });
 
-  const currentAmount = amount ? parseFloat(amount) : 0;
+  const { formattedBalance, isInsufficientBalance, usdValue } = useTokenBalance(
+    selectedToken ?? null,
+    amount
+  );
+  const { getRequiredGasAmount } = useGasEstimation();
 
   const [isHovered, setIsHovered] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handlePercentageClick = (percentage: number) => {
+  const handlePercentageClick = async (percentage: number) => {
     if (!selectedToken) return;
 
-    const balance =
-      Number(selectedToken.balance) / 10 ** selectedToken.decimals;
-    const amount = (balance * percentage) / 100;
+    const balanceInWei = BigInt(selectedToken.balance);
 
-    const formattedAmount = amount.toFixed(selectedToken.decimals);
-    const cleanAmount = parseFloat(formattedAmount).toString();
+    const percentageBig = BigInt(Math.floor(percentage));
+    const recipient = (getValues("recipient") as `0x${string}`) || address;
+    let amountWei = (balanceInWei * percentageBig) / BigInt(100);
 
-    setValue(fieldName, cleanAmount, { shouldValidate: true });
+    if (percentage === 100) {
+      if (selectedToken.native_token) {
+        const requiredGasAmountWei = await getRequiredGasAmount(
+          selectedToken,
+          balanceInWei,
+          recipient
+        );
+
+        amountWei = computeMaxNativeInput(balanceInWei, requiredGasAmountWei);
+      } else {
+        amountWei = balanceInWei;
+      }
+    }
+
+    const formattedAmount = formatUnits(amountWei, selectedToken.decimals);
+    setValue(fieldName, formattedAmount, { shouldValidate: true });
   };
-
-  const tokenBalance = selectedToken
-    ? parseFloat(formatBalance(selectedToken.balance, selectedToken.decimals))
-    : 0;
-
-  const isInsufficientBalance = currentAmount > tokenBalance;
 
   return (
     <>
@@ -124,54 +139,20 @@ const TokenAmountInput = ({
                 isInsufficientBalance ? "text-destructive" : "text-secondary"
               }
             >
-              {selectedToken ? `${tokenBalance} ${selectedToken.symbol}` : "0"}
+              {selectedToken
+                ? `${formattedBalance} ${selectedToken.symbol}`
+                : "0"}
             </span>
             {selectedToken && !!selectedToken.usd_price && (
-              <span className="text-secondary/60">
-                ${calculateUsdValue(getValues(fieldName), selectedToken)}
-              </span>
+              <span className="text-secondary/60">${usdValue}</span>
             )}
 
             {/* Quick amount selection buttons */}
-            {selectedToken && (
-              <div className="flex gap-x-1.5 absolute right-0 -top-6">
-                <AnimatePresence>
-                  {isHovered &&
-                    [25, 50, 75, 100].map((percentage, index) => (
-                      <motion.button
-                        key={percentage}
-                        type="button"
-                        onClick={() => handlePercentageClick(percentage)}
-                        className="text-xs px-1.5 py-1 rounded-xl bg-select cursor-pointer hover:bg-select-hover text-secondary hover:text-foreground transition-colors border border-border-select"
-                        initial={{ opacity: 0, scale: 0, y: -10 }}
-                        animate={{
-                          opacity: 1,
-                          scale: 1,
-                          y: 0,
-                          transition: {
-                            delay: index * 0.05,
-                            duration: 0.3,
-                            type: "spring",
-                            bounce: 0.5,
-                            stiffness: 300,
-                            damping: 15,
-                          },
-                        }}
-                        exit={{
-                          opacity: 0,
-                          scale: 0,
-                          y: -10,
-                          transition: {
-                            duration: 0.2,
-                          },
-                        }}
-                      >
-                        {percentage === 100 ? "MAX" : `${percentage}%`}
-                      </motion.button>
-                    ))}
-                </AnimatePresence>
-              </div>
-            )}
+            <PercentageButtons
+              selectedToken={selectedToken ?? null}
+              isHovered={isHovered}
+              onPercentageClick={handlePercentageClick}
+            />
           </div>
         </div>
       </InputWrapper>

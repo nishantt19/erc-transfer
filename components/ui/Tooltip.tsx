@@ -33,7 +33,7 @@ export function Tooltip({ children, content, position = "top" }: TooltipProps) {
       {children}
       {isVisible && (
         <div
-          className={`absolute z-50 px-3 py-2 text-xs font-medium text-white bg-input backdrop-blur-sm rounded-lg shadow-xl border border-border-input whitespace-nowrap ${positionClasses[position]}`}
+          className={`absolute z-50 max-w-sm min-w-2xs text-center px-3 py-2 text-xs text-wrap font-medium text-white bg-input backdrop-blur-sm rounded-lg shadow-xl border border-border-input ${positionClasses[position]}`}
         >
           {content}
           <div

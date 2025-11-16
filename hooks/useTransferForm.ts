@@ -9,9 +9,17 @@ import {
 } from "@/schema/transferSchema";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-export const useTransferForm = () => {
+interface UseTransferFormProps {
+  initialToken?: Token | null;
+}
+
+export const useTransferForm = ({
+  initialToken = null,
+}: UseTransferFormProps = {}) => {
   const { isConnected } = useAccount();
-  const [token, setToken] = useState<Token | null>(null);
+  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+
+  const token = isConnected ? (selectedToken ?? initialToken) : null;
 
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(transferSchema),
@@ -24,13 +32,21 @@ export const useTransferForm = () => {
   });
 
   useEffect(() => {
+    if (token) {
+      form.setValue("tokenAddress", token.token_address, {
+        shouldValidate: false,
+      });
+    }
+  }, [token, form]);
+
+  useEffect(() => {
     if (!isConnected) {
       form.reset();
     }
   }, [isConnected, form]);
 
   const handleTokenSelect = (token: Token) => {
-    setToken(token);
+    setSelectedToken(token);
     form.setValue("tokenAddress", token.token_address, {
       shouldValidate: true,
     });

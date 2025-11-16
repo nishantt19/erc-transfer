@@ -1,24 +1,14 @@
 "use client";
-import { useMemo } from "react";
-import { useAccount, useChainId } from "wagmi";
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import { useAccount } from "wagmi";
 import { Coin1 } from "iconsax-react";
 
-import { MORALIS_CHAIN_MAP } from "@/utils/constants";
 import { type Token } from "@/types";
 import { truncateAddress } from "@/utils/utils";
 
 import ShimmerAnimation from "@/components/ui/ShimmerAnimation";
 import { TokenAvatar } from "@/components/main/token";
 import Modal from "@/components/ui/Modal";
-
-async function fetchWalletTokens(address: string, chain: string) {
-  const res = await axios.get("/api/tokens", {
-    params: { address, chain },
-  });
-  return res.data;
-}
+import { useWalletTokens } from "@/hooks/useWalletTokens";
 
 type TokenSelectModalProps = {
   isOpen: boolean;
@@ -33,17 +23,8 @@ export default function TokenSelectModal({
   selectedToken,
   onTokenSelect,
 }: TokenSelectModalProps) {
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-
-  const chain = useMemo(() => MORALIS_CHAIN_MAP[chainId], [chainId]);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["walletTokens", address, chain],
-    queryFn: () => fetchWalletTokens(address!, chain!),
-    enabled: !!address && !!chain && isConnected && isOpen,
-  });
-
+  const { isConnected } = useAccount();
+  const { tokens, isLoading } = useWalletTokens();
   const handleTokenSelect = (token: Token) => {
     onTokenSelect(token);
     onClose();
@@ -61,7 +42,7 @@ export default function TokenSelectModal({
             <ShimmerAnimation />
             <ShimmerAnimation />
           </>
-        ) : !data?.result?.length ? (
+        ) : !tokens.length ? (
           <div className="text-secondary text-center py-8">No tokens found</div>
         ) : (
           <>
@@ -69,7 +50,7 @@ export default function TokenSelectModal({
               <Coin1 size={18} color="#ffffffa6" />
               <p className="text-secondary font-medium">Your Tokens</p>
             </div>
-            {data.result.map((token: Token) => {
+            {tokens.map((token: Token) => {
               const isSelected =
                 selectedToken?.token_address === token.token_address;
               return (
