@@ -24,7 +24,7 @@ export const InputWrapper = ({ label, error, children }: InputWrapperProps) => {
     >
       <div className="text-sm text-secondary uppercase">{label}</div>
       {children}
-      {error && <div className="text-red-500 text-xs mt-1">{error}</div>}
+      {error && <div className="text-destructive text-xs mt-1">{error}</div>}
     </div>
   );
 };

@@ -5,8 +5,8 @@ export default function Home() {
   return (
     <main className="flex flex-col bg-background h-screen">
       <Navbar />
-      <div className="flex flex-col items-center justify-start flex-1 relative pt-20">
-        <h1 className="text-7xl font-bold text-foreground text-center mb-12">
+      <div className="flex flex-col items-center justify-start flex-1 relative pt-16">
+        <h1 className="text-7xl font-bold text-foreground text-center mb-8">
           Transfer Tokens with Ease
         </h1>
         <div className="w-full max-w-[480px] mx-auto space-y-6 relative">

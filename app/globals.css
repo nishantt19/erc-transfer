@@ -16,6 +16,8 @@
   --accent-purple: #cab1f4;
   --accent-blue: #0E76FD;
   --destructive: #ef4444;
+  --success: #34a85a;
+  --warning: #f7c873;
 }
 
 @theme inline {
@@ -24,6 +26,8 @@
   --color-primary: var(--primary);
   --color-secondary: var(--text-secondary);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-card: var(--card-color);
   --color-input: var(--input-color);
   --color-input-hover: var(--input-hover-color);
@@ -33,6 +37,7 @@
   --color-select-hover: var(--select-hover-color);
   --color-placeholder: var(--text-placeholder);
   --font-dm-sans: var(--font-dm-sans);
+  --color-accent-blue: var(--accent-blue);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,5 +54,5 @@ body {
 }
 
 .blur-gradient {
-  @apply absolute rounded-full bg-linear-to-br from-[#171eaa] via-[#0E76FD] to-[#cab1f4] pointer-events-none blur-[150px] h-[600px] w-[600px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0
+  @apply absolute rounded-full bg-linear-to-br from-[#171eaa] via-[#0E76FD] to-[#cab1f4] pointer-events-none blur-[150px] h-[600px] w-[600px] left-1/2 top-52 -translate-x-1/2 -translate-y-60 z-0
 }

@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAccount } from "wagmi";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import { type Token } from "@/types";
 import {
   type TransferFormValues,
   transferSchema,
 } from "@/schema/transferSchema";
-import { zodResolver } from "@hookform/resolvers/zod";
 
 interface UseTransferFormProps {
   initialToken?: Token | null;
@@ -16,10 +16,13 @@ interface UseTransferFormProps {
 export const useTransferForm = ({
   initialToken = null,
 }: UseTransferFormProps = {}) => {
-  const { isConnected } = useAccount();
+  const { isConnected, chainId } = useAccount();
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
 
-  const token = isConnected ? (selectedToken ?? initialToken) : null;
+  const token = useMemo(() => {
+    if (!isConnected) return null;
+    return selectedToken ?? initialToken;
+  }, [isConnected, selectedToken, initialToken]);
 
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(transferSchema),
@@ -32,6 +35,17 @@ export const useTransferForm = ({
   });
 
   useEffect(() => {
+    if (!isConnected) {
+      form.reset();
+    }
+  }, [isConnected, form]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedToken(null);
+  }, [chainId]);
+
+  useEffect(() => {
     if (token) {
       form.setValue("tokenAddress", token.token_address, {
         shouldValidate: false,
@@ -39,18 +53,15 @@ export const useTransferForm = ({
     }
   }, [token, form]);
 
-  useEffect(() => {
-    if (!isConnected) {
-      form.reset();
-    }
-  }, [isConnected, form]);
-
-  const handleTokenSelect = (token: Token) => {
-    setSelectedToken(token);
-    form.setValue("tokenAddress", token.token_address, {
-      shouldValidate: true,
-    });
-  };
+  const handleTokenSelect = useCallback(
+    (newToken: Token) => {
+      setSelectedToken(newToken);
+      form.setValue("tokenAddress", newToken.token_address, {
+        shouldValidate: true,
+      });
+    },
+    [form]
+  );
 
   return {
     ...form,

@@ -7,7 +7,7 @@ import { Toaster } from "sonner";
 
 import { config } from "@/config/wagmi";
 
-type Props = {
+type ProviderProps = {
   children: React.ReactNode;
 };
 
@@ -69,7 +69,7 @@ const customTheme: Theme = {
   },
 };
 
-const Providers = ({ children }: Props) => {
+const Providers = ({ children }: ProviderProps) => {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
