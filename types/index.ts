@@ -6,10 +6,17 @@ export type Token = {
   symbol: string;
   logo: string | null;
   decimals: number;
-  balance: string;
+  balance?: string;
   usd_price: string;
-  balance_formatted: string;
-  native_token: boolean;
+  native_token?: boolean;
+};
+
+export type API_RESPONSE = {
+  cursor: string | null;
+  page: number;
+  page_size: number;
+  block_number: number;
+  result: Token[];
 };
 
 export type CHAIN_ID = 1 | 11155111 | 100 | 8453 | 84532;
@@ -100,3 +107,12 @@ export type TransactionStatusType =
   | "pending"
   | "included"
   | "confirmed";
+
+export type MoralisTokenPriceResponse = {
+  tokenName: string;
+  tokenSymbol: string;
+  tokenLogo: string | null;
+  tokenDecimals: string;
+  usdPriceFormatted: string;
+  tokenAddress: string;
+};

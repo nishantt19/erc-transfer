@@ -1,11 +1,17 @@
 import { type Token } from "@/types";
 import { parseUnits, formatUnits, type Address, type Hash } from "viem";
-import { BIGINT_ZERO, GAS_CONSTANTS } from "./constants";
+import { BIGINT_ZERO, GAS_CONSTANTS, TESTNET_CHAIN_IDS } from "./constants";
 
-const GRADIENT_SATURATION = 70;
-const GRADIENT_LIGHTNESS_1 = 55;
-const GRADIENT_LIGHTNESS_2 = 45;
-const GRADIENT_HUE_MULTIPLIER = 37;
+const COLORS = [
+  { h: 262 },
+  { h: 217 },
+  { h: 240 },
+  { h: 290 },
+  { h: 330 },
+  { h: 3 },
+  { h: 27 },
+  { h: 45 },
+];
 
 const hashStringToNumber = (str: string): number => {
   let hash = 0;
@@ -16,13 +22,15 @@ const hashStringToNumber = (str: string): number => {
   return Math.abs(hash);
 };
 
-export const stringToGradient = (str: string): string => {
+export const stringToColorPair = (
+  str: string
+): { bg: string; text: string } => {
   const hash = hashStringToNumber(str);
-  const hue1 = hash % 360;
-  const hue2 = (hash * GRADIENT_HUE_MULTIPLIER) % 360;
-  const color1 = `hsl(${hue1}, ${GRADIENT_SATURATION}%, ${GRADIENT_LIGHTNESS_1}%)`;
-  const color2 = `hsl(${hue2}, ${GRADIENT_SATURATION}%, ${GRADIENT_LIGHTNESS_2}%)`;
-  return `linear-gradient(135deg, ${color1}, ${color2})`;
+  const { h } = COLORS[hash % COLORS.length];
+  return {
+    bg: `hsl(${h} ${50}% 7%)`,
+    text: `hsl(${h} ${50}% 42%)`,
+  };
 };
 
 export const formatBalance = (
@@ -89,4 +97,8 @@ export const formatSeconds = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return mins === 0 ? `${secs}s` : `${mins}m ${secs}s`;
+};
+
+export const isTestnetChain = (chainId: number): boolean => {
+  return TESTNET_CHAIN_IDS.includes(chainId);
 };

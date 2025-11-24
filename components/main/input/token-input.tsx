@@ -1,6 +1,6 @@
 "use client";
 import { useState, useCallback } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 import {
   type UseFormGetValues,
   type UseFormRegisterReturn,
@@ -11,7 +11,8 @@ import {
 import { ArrowDown2 } from "iconsax-react";
 import { formatUnits } from "viem";
 
-import { computeMaxNativeInput } from "@/utils/utils";
+import { computeMaxNativeInput, isTestnetChain } from "@/utils/utils";
+import { CHAIN_CONFIG } from "@/utils/constants";
 import { type Token } from "@/types";
 import { useGasEstimation, useTokenBalance, useWalletTokens } from "@/hooks";
 
@@ -46,8 +47,12 @@ const TokenAmountInput = ({
   control,
 }: TokenAmountInputProps) => {
   const { isConnected, address, isConnecting, isReconnecting } = useAccount();
+  const chainId = useChainId();
   const { isLoading: isLoadingTokens } = useWalletTokens();
   const amount = useWatch({ name: fieldName, control });
+
+  const chainLogo = CHAIN_CONFIG[chainId].LOGO;
+  const isTestnet = isTestnetChain(chainId);
 
   const {
     formattedBalance,
@@ -131,7 +136,12 @@ const TokenAmountInput = ({
                 className="rounded-full pl-1 pr-3 flex justify-between items-center gap-x-2 bg-select border border-border-select hover:bg-select-hover h-10 cursor-pointer shrink-0"
                 onClick={handleModalOpen}
               >
-                <TokenAvatar token={selectedToken} size="sm" />
+                <TokenAvatar
+                  token={selectedToken}
+                  size="sm"
+                  chainLogo={chainLogo}
+                  isTestnet={isTestnet}
+                />
                 <p className="text-white text-base font-medium">
                   {selectedToken.symbol}
                 </p>

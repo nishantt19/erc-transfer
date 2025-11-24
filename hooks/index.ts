@@ -5,6 +5,8 @@ import { useGasEstimation } from "./useGasEstimation";
 import { useTokenBalance } from "./useTokenBalance";
 import { useTransferForm } from "./useTransferForm";
 import { useWalletTokens } from "./useWalletTokens";
+import { useTokenSearch } from "./useTokenSearch";
+import { useRecentSearches } from "./useRecentSearches";
 
 export {
   useGasEstimation,
@@ -14,4 +16,6 @@ export {
   useTransactionStatus,
   useTransferForm,
   useWalletTokens,
+  useTokenSearch,
+  useRecentSearches,
 };

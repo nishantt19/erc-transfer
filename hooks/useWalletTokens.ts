@@ -3,10 +3,13 @@ import { useAccount, useChainId } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { CHAIN_CONFIG } from "@/utils/constants";
-import { type Token } from "@/types";
+import { type Token, type API_RESPONSE } from "@/types";
 
-const fetchWalletTokens = async (address: string, chain: string) => {
-  const res = await axios.get("/api/tokens", {
+const fetchWalletTokens = async (
+  address: string,
+  chain: string
+): Promise<API_RESPONSE> => {
+  const res = await axios.get<API_RESPONSE>("/api/tokens", {
     params: { address, chain },
   });
   return res.data;
@@ -28,7 +31,7 @@ export const useWalletTokens = () => {
 
   const tokens = useMemo(() => data?.result || [], [data?.result]);
 
-  const nativeToken: Token = useMemo(
+  const nativeToken: Token | null = useMemo(
     () => tokens.find((token: Token) => token.native_token) || null,
     [tokens]
   );

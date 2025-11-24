@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
         hostname: "cdn.moralis.io",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "logo.moralis.io",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "raw.githubusercontent.com",
+        pathname: "/**",
+      },
     ],
     qualities: [100, 75],
   },

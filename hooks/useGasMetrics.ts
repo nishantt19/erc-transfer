@@ -6,17 +6,22 @@ import type { InfuraGasResponse } from "@/types";
 
 const REFETCH_INTERVAL = 12000;
 
+const fetchGasMetrics = async (
+  chainId: number
+): Promise<InfuraGasResponse> => {
+  const res = await axios.get<InfuraGasResponse>("/api/gas", {
+    params: { chainId },
+  });
+  return res.data;
+};
+
 export const useGasMetrics = () => {
   const { chainId } = useAccount();
 
   const queryFn = useMemo(
     () => async () => {
       if (!chainId) throw new Error("No chain ID available");
-
-      const response = await axios.get<InfuraGasResponse>(
-        `https://gas.api.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_KEY}/networks/${chainId}/suggestedGasFees`
-      );
-      return response.data;
+      return fetchGasMetrics(chainId);
     },
     [chainId]
   );
