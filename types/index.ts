@@ -62,6 +62,7 @@ export type TransactionFlow =
       tokenSymbol: string;
       isNativeToken: boolean;
       estimate: TransactionEstimate | null;
+      wasReplaced?: boolean;
     }
   | {
       phase: "confirmed";
@@ -74,6 +75,7 @@ export type TransactionFlow =
       recipient: string;
       tokenSymbol: string;
       isNativeToken: boolean;
+      wasReplaced?: boolean;
     };
 
 export type TransactionAction =
@@ -90,6 +92,12 @@ export type TransactionAction =
       };
     }
   | { type: "UPDATE_ESTIMATE"; payload: TransactionEstimate }
+  | {
+      type: "REPLACE_TRANSACTION";
+      payload: {
+        newHash: `0x${string}`;
+      };
+    }
   | {
       type: "CONFIRM_TRANSACTION";
       payload: {

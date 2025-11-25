@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { formatGwei } from "viem";
+import { IoCheckmark, IoCopy } from "react-icons/io5";
 
 import {
   getNetworkCongestionLevel,
@@ -8,8 +9,10 @@ import {
   getCongestionLabel,
 } from "@/utils/networkCongestion";
 import type { TransactionEstimate } from "@/types";
-import { formatSeconds } from "@/utils/utils";
+import { formatSeconds, truncateHash } from "@/utils/utils";
 import { GAS_TIER_LABELS } from "@/utils/gasCalculations";
+import { COPY_RESET_DELAY } from "@/utils/constants";
+import { Tooltip } from "../ui/Tooltip";
 
 interface TransactionEstimationProps {
   estimate: TransactionEstimate | null;
@@ -17,6 +20,8 @@ interface TransactionEstimationProps {
   blockNumber?: bigint;
   status: "pending" | "included";
   networkCongestion?: number;
+  wasReplaced?: boolean;
+  currentHash?: `0x${string}`;
 }
 
 const UPDATE_INTERVAL = 1000;
@@ -27,10 +32,13 @@ export const TransactionEstimation = ({
   blockNumber,
   status,
   networkCongestion = 0.5,
+  wasReplaced = false,
+  currentHash,
 }: TransactionEstimationProps) => {
   const [elapsedTime, setElapsedTime] = useState(() =>
     Math.floor((Date.now() - startTime) / 1000)
   );
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -38,25 +46,45 @@ export const TransactionEstimation = ({
     }, UPDATE_INTERVAL);
     return () => clearInterval(interval);
   }, [startTime]);
+
   const congestionLevel = getNetworkCongestionLevel(networkCongestion);
   const congestionColor = getCongestionColor(congestionLevel);
   const congestionLabel = getCongestionLabel(congestionLevel);
 
-  const statusText =
-    status === "pending" ? "Pending in mempool" : "Waiting for confirmations";
+  const statusText = wasReplaced
+    ? "Transaction Sped Up"
+    : status === "pending"
+    ? "Pending in mempool"
+    : "Waiting for confirmations";
 
-  const statusStyles =
-    status === "pending"
-      ? {
-          border: "border-warning/50",
-          textColor: "text-warning",
-          dotBg: "bg-warning",
-        }
-      : {
-          border: "border-accent-blue/50",
-          textColor: "text-accent-blue",
-          dotBg: "bg-accent-blue",
-        };
+  const statusStyles = wasReplaced
+    ? {
+        border: "border-purple-500/50",
+        textColor: "text-purple-500",
+        dotBg: "bg-purple-500",
+      }
+    : status === "pending"
+    ? {
+        border: "border-warning/50",
+        textColor: "text-warning",
+        dotBg: "bg-warning",
+      }
+    : {
+        border: "border-accent-blue/50",
+        textColor: "text-accent-blue",
+        dotBg: "bg-accent-blue",
+      };
+
+  const handleCopy = async () => {
+    if (!currentHash) return;
+    try {
+      await navigator.clipboard.writeText(currentHash);
+      setCopied(true);
+      setTimeout(() => setCopied(false), COPY_RESET_DELAY);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
 
   const tierLabel = estimate
     ? GAS_TIER_LABELS[estimate.tier] || estimate.tier
@@ -123,6 +151,30 @@ export const TransactionEstimation = ({
             >
               {blockNumber.toString()}
             </span>
+          </div>
+        )}
+        {wasReplaced && currentHash && (
+          <div className="flex flex-col gap-y-1.5 pt-2.5 mt-0.5 border-t border-border">
+            <span className="text-purple-500 font-medium text-xs">
+              New Transaction Hash
+            </span>
+            <div className="flex items-center justify-between gap-2 bg-input border-border-input rounded-lg p-2.5 border border-border/50">
+              <span className="font-mono text-xs text-foreground">
+                {truncateHash(currentHash)}
+              </span>
+              <Tooltip content="Copy to Clipboard" className="text-nowrap">
+                <button
+                  onClick={handleCopy}
+                  className="p-1.5 hover:bg-input-hover rounded-md transition-colors cursor-pointer"
+                >
+                  {copied ? (
+                    <IoCheckmark className="w-4 h-4 text-success" />
+                  ) : (
+                    <IoCopy className="w-4 h-4 text-foreground" />
+                  )}
+                </button>
+              </Tooltip>
+            </div>
           </div>
         )}
       </div>

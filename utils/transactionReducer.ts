@@ -39,6 +39,19 @@ export function transactionReducer(
         estimate: action.payload,
       };
 
+    case "REPLACE_TRANSACTION":
+      if (state.phase !== "pending") {
+        console.warn(
+          `Invalid transition: Cannot REPLACE_TRANSACTION from ${state.phase}`
+        );
+        return state;
+      }
+      return {
+        ...state,
+        hash: action.payload.newHash,
+        wasReplaced: true,
+      };
+
     case "CONFIRM_TRANSACTION":
       if (state.phase !== "pending") {
         console.warn(
@@ -54,6 +67,7 @@ export function transactionReducer(
         recipient: state.recipient,
         tokenSymbol: state.tokenSymbol,
         isNativeToken: state.isNativeToken,
+        wasReplaced: state.wasReplaced,
         ...action.payload,
       };
 

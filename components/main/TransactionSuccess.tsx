@@ -15,6 +15,7 @@ interface TransactionSuccessProps {
   completionTimeSeconds: number;
   isNativeToken: boolean;
   chainId: CHAIN_ID;
+  wasReplaced?: boolean;
 }
 
 export const TransactionSuccess = ({
@@ -24,6 +25,7 @@ export const TransactionSuccess = ({
   completionTimeSeconds,
   isNativeToken,
   chainId,
+  wasReplaced = false,
 }: TransactionSuccessProps) => {
   const [copied, setCopied] = useState(false);
 
@@ -56,6 +58,14 @@ export const TransactionSuccess = ({
         <IoCheckmark className="w-5 h-5 text-success" />
       </div>
       <div className="flex flex-col gap-y-2.5">
+        {wasReplaced && (
+          <div className="flex items-center justify-between pb-2.5 mb-0.5 border-b border-border">
+            <span className="text-muted-foreground font-medium">Status:</span>
+            <span className="font-semibold text-purple-500">
+              Transaction Sped Up
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground font-medium">Amount:</span>
           <span className="font-semibold text-foreground">

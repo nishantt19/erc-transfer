@@ -1,5 +1,6 @@
 import { useTransactionStatus } from "./useTransactionStatus";
 import { useTransactionEstimation } from "./useTransactionEstimation";
+import { useTransactionReplacement } from "./useTransactionReplacement";
 import { useGasMetrics } from "./useGasMetrics";
 import { useGasEstimation } from "./useGasEstimation";
 import { useTokenBalance } from "./useTokenBalance";
@@ -13,6 +14,7 @@ export {
   useGasMetrics,
   useTokenBalance,
   useTransactionEstimation,
+  useTransactionReplacement,
   useTransactionStatus,
   useTransferForm,
   useWalletTokens,

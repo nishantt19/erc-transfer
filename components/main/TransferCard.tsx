@@ -18,6 +18,7 @@ import { TransactionEstimation } from "@/components/main/TransactionEstimation";
 import { TransactionSuccess } from "@/components/main/TransactionSuccess";
 import {
   useTransactionStatus,
+  useTransactionReplacement,
   useGasEstimation,
   useGasMetrics,
   useTokenBalance,
@@ -67,6 +68,43 @@ const TransferCard = () => {
   const { status: liveStatus, blockNumber } = useTransactionStatus({
     hash: txHash,
     chainId: chainId as CHAIN_ID | undefined,
+  });
+
+  const { currentHash, wasReplaced } = useTransactionReplacement({
+    txHash,
+    chainId: chainId as number | undefined,
+    enabled: txFlow.phase === "pending",
+    onHashChange: useCallback(
+      async (newHash: `0x${string}`) => {
+        dispatch({
+          type: "REPLACE_TRANSACTION",
+          payload: { newHash },
+        });
+
+        toast.info("Transaction replaced", {
+          description: `New hash: ${truncateHash(newHash)}`,
+        });
+
+        // Re-estimate gas for the new transaction
+        if (gasMetrics && chainId) {
+          const newEstimate = await estimateTransaction(
+            newHash,
+            gasMetrics,
+            chainId as CHAIN_ID
+          );
+          if (newEstimate) {
+            dispatch({
+              type: "UPDATE_ESTIMATE",
+              payload: newEstimate,
+            });
+          }
+        }
+      },
+      [dispatch, gasMetrics, chainId, estimateTransaction]
+    ),
+    onComplete: useCallback((finalHash: `0x${string}`) => {
+      console.log("Transaction mined:", finalHash);
+    }, []),
   });
 
   const amountValue = watch("amount");
@@ -268,7 +306,7 @@ const TransferCard = () => {
             amount: data.amount,
             recipient: data.recipient,
             tokenSymbol: selectedToken.symbol,
-            isNativeToken: selectedToken.native_token,
+            isNativeToken: !!selectedToken.native_token,
           },
         });
 
@@ -387,6 +425,8 @@ const TransferCard = () => {
           blockNumber={blockNumber}
           status={liveStatus === "included" ? "included" : "pending"}
           networkCongestion={gasMetrics?.networkCongestion}
+          wasReplaced={wasReplaced}
+          currentHash={currentHash ?? undefined}
         />
       )}
 
@@ -398,6 +438,7 @@ const TransferCard = () => {
           completionTimeSeconds={txFlow.completionTimeSeconds}
           isNativeToken={txFlow.isNativeToken}
           chainId={chainId as CHAIN_ID}
+          wasReplaced={txFlow.wasReplaced}
         />
       )}
     </div>
