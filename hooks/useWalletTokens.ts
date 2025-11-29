@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useAccount, useChainId } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { CHAIN_CONFIG } from "@/utils/constants";
+import { CHAIN_CONFIG, TIMING_CONSTANTS } from "@/constants";
 import { type Token, type API_RESPONSE } from "@/types";
 
 const fetchWalletTokens = async (
@@ -19,14 +19,14 @@ export const useWalletTokens = () => {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
 
-  const chain = useMemo(() => CHAIN_CONFIG[chainId].MORALIS_ID, [chainId]);
+  const chain = CHAIN_CONFIG[chainId]?.MORALIS_ID;
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["walletTokens", address, chain],
     queryFn: () => fetchWalletTokens(address!, chain!),
     enabled: !!address && !!chain && isConnected,
     refetchOnWindowFocus: true,
-    staleTime: 60000,
+    staleTime: TIMING_CONSTANTS.TOKEN_STALE_TIME,
   });
 
   const tokens = useMemo(() => data?.result || [], [data?.result]);

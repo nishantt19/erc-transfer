@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTransaction } from "wagmi";
 
 import type { CHAIN_ID, TransactionStatusType } from "@/types";
-import { TRANSACTION_POLL_INTERVAL } from "@/utils/constants";
+import { TIMING_CONSTANTS } from "@/constants";
 
 interface UseTransactionStatusProps {
   hash: `0x${string}` | null;
@@ -18,7 +18,7 @@ export const useTransactionStatus = ({
     chainId,
     query: {
       enabled: !!hash && !!chainId,
-      refetchInterval: TRANSACTION_POLL_INTERVAL,
+      refetchInterval: TIMING_CONSTANTS.TRANSACTION_POLL_INTERVAL,
       notifyOnChangeProps: ["data"],
     },
   });

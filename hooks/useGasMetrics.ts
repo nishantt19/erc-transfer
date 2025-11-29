@@ -1,10 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
-import { useMemo } from "react";
 import axios from "axios";
 import type { InfuraGasResponse } from "@/types";
-
-const REFETCH_INTERVAL = 12000;
+import { TIMING_CONSTANTS } from "@/constants";
 
 const fetchGasMetrics = async (
   chainId: number
@@ -18,24 +16,19 @@ const fetchGasMetrics = async (
 export const useGasMetrics = () => {
   const { chainId } = useAccount();
 
-  const queryFn = useMemo(
-    () => async () => {
-      if (!chainId) throw new Error("No chain ID available");
-      return fetchGasMetrics(chainId);
-    },
-    [chainId]
-  );
-
   const {
     data: gasMetrics,
     isLoading,
     error,
   } = useQuery<InfuraGasResponse>({
     queryKey: ["gasMetrics", chainId],
-    queryFn,
+    queryFn: async () => {
+      if (!chainId) throw new Error("No chain ID available");
+      return fetchGasMetrics(chainId);
+    },
     enabled: !!chainId,
-    staleTime: REFETCH_INTERVAL,
-    refetchInterval: REFETCH_INTERVAL,
+    staleTime: TIMING_CONSTANTS.GAS_REFETCH_INTERVAL,
+    refetchInterval: TIMING_CONSTANTS.GAS_REFETCH_INTERVAL,
   });
 
   return {

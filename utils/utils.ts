@@ -1,6 +1,6 @@
 import { type Token } from "@/types";
 import { parseUnits, formatUnits, type Address, type Hash } from "viem";
-import { BIGINT_ZERO, GAS_CONSTANTS, TESTNET_CHAIN_IDS } from "./constants";
+import { BIGINT_ZERO, GAS_CONSTANTS, TESTNET_CHAIN_IDS } from "@/constants";
 
 const COLORS = [
   { h: 262 },

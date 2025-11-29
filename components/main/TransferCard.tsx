@@ -1,5 +1,5 @@
 "use client";
-import { useReducer, useEffect, useCallback, useRef, useMemo } from "react";
+import { useEffect, useCallback, useRef, useMemo } from "react";
 import { useAccount } from "wagmi";
 import {
   sendTransaction,
@@ -7,8 +7,21 @@ import {
   waitForTransactionReceipt,
 } from "@wagmi/core";
 import { erc20Abi, parseUnits } from "viem";
-import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  resetForm,
+  triggerBalanceRefetch,
+} from "@/store/slices/transferFormSlice";
+import {
+  startSigning,
+  submitTransaction,
+  updateEstimate,
+  replaceTransaction,
+  confirmTransaction,
+  resetTransaction,
+} from "@/store/slices/transactionSlice";
 
 import type { TransferFormValues } from "@/schema/transferSchema";
 import type { CHAIN_ID, TransactionFlow } from "@/types";
@@ -25,18 +38,23 @@ import {
   useTransactionEstimation,
   useTransferForm,
   useWalletTokens,
+  useToastSync,
 } from "@/hooks";
 import { config } from "@/config/wagmi";
 import { truncateHash } from "@/utils/utils";
-import { CHAIN_CONFIG } from "@/utils/constants";
-import { transactionReducer } from "@/utils/transactionReducer";
-
-const AUTO_HIDE_DELAY = 10000;
+import { CHAIN_CONFIG, TIMING_CONSTANTS } from "@/constants";
 
 const TransferCard = () => {
   const { isConnected, chainId, address } = useAccount();
   const { nativeToken, isLoading: isLoadingTokens } = useWalletTokens();
-  const [txFlow, dispatch] = useReducer(transactionReducer, { phase: "idle" });
+  const dispatch = useAppDispatch();
+  const txFlow = useAppSelector(
+    (state) => state.transaction
+  ) as TransactionFlow;
+  const refetchTrigger = useAppSelector(
+    (state) => state.transferForm.refetchTrigger
+  );
+  const syncedToast = useToastSync();
 
   const isProcessing = txFlow.phase !== "idle";
   const txHash =
@@ -62,30 +80,31 @@ const TransferCard = () => {
   const { refetchBalance } = useTokenBalance(selectedToken, undefined);
   const { estimateTransaction } = useTransactionEstimation();
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const { getRequiredGasAmount, showGasError, isEstimating } =
-    useGasEstimation();
+  const { getRequiredGasAmount } = useGasEstimation();
+  const showGasError = useAppSelector(
+    (state) => state.transferForm.showGasError
+  );
+  const isEstimating = useAppSelector(
+    (state) => state.transferForm.isEstimating
+  );
 
   const { status: liveStatus, blockNumber } = useTransactionStatus({
     hash: txHash,
     chainId: chainId as CHAIN_ID | undefined,
   });
 
-  const { currentHash, wasReplaced } = useTransactionReplacement({
+  useTransactionReplacement({
     txHash,
     chainId: chainId as number | undefined,
     enabled: txFlow.phase === "pending",
     onHashChange: useCallback(
       async (newHash: `0x${string}`) => {
-        dispatch({
-          type: "REPLACE_TRANSACTION",
-          payload: { newHash },
-        });
+        dispatch(replaceTransaction({ newHash }));
 
-        toast.info("Transaction replaced", {
+        syncedToast.info("Transaction replaced", {
           description: `New hash: ${truncateHash(newHash)}`,
         });
 
-        // Re-estimate gas for the new transaction
         if (gasMetrics && chainId) {
           const newEstimate = await estimateTransaction(
             newHash,
@@ -93,56 +112,87 @@ const TransferCard = () => {
             chainId as CHAIN_ID
           );
           if (newEstimate) {
-            dispatch({
-              type: "UPDATE_ESTIMATE",
-              payload: newEstimate,
-            });
+            dispatch(updateEstimate(newEstimate));
           }
         }
       },
-      [dispatch, gasMetrics, chainId, estimateTransaction]
+      [dispatch, gasMetrics, chainId, estimateTransaction, syncedToast]
     ),
-    onComplete: useCallback((finalHash: `0x${string}`) => {
-      console.log("Transaction mined:", finalHash);
-    }, []),
   });
 
+  useEffect(() => {
+    if (
+      txFlow.phase === "pending" &&
+      !txFlow.estimate &&
+      txHash &&
+      gasMetrics &&
+      chainId
+    ) {
+      estimateTransaction(txHash, gasMetrics, chainId as CHAIN_ID).then(
+        (estimate) => {
+          if (estimate) {
+            dispatch(updateEstimate(estimate));
+          }
+        }
+      );
+    }
+  }, [txFlow, txHash, gasMetrics, chainId, estimateTransaction, dispatch]);
+
   const amountValue = watch("amount");
+  const recipientValue = watch("recipient");
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    if (selectedToken && amountValue) {
-      debounceRef.current = setTimeout(() => {
-        getRequiredGasAmount(
-          selectedToken,
-          parseUnits(amountValue, selectedToken.decimals),
-          (getValues("recipient") as `0x${string}`) || address
-        );
-      }, 500);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
     }
+
+    if (!selectedToken || !amountValue || !address) {
+      if (!amountValue) {
+        dispatch({ type: "transferForm/setGasError", payload: false });
+        dispatch({ type: "transferForm/setIsEstimating", payload: false });
+      }
+      return;
+    }
+
+    debounceRef.current = setTimeout(() => {
+      getRequiredGasAmount(
+        selectedToken,
+        parseUnits(amountValue, selectedToken.decimals),
+        (recipientValue as `0x${string}`) || address
+      );
+    }, TIMING_CONSTANTS.GAS_ESTIMATION_DEBOUNCE);
 
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
     };
-  }, [amountValue, selectedToken, getRequiredGasAmount, getValues, address]);
-
-  useEffect(() => {
-    if (!isConnected) {
-      dispatch({ type: "RESET" });
-      reset();
-    }
-  }, [isConnected, reset]);
+  }, [
+    amountValue,
+    selectedToken,
+    address,
+    recipientValue,
+    getRequiredGasAmount,
+    dispatch,
+  ]);
 
   useEffect(() => {
     if (txFlow.phase === "confirmed") {
       const timer = setTimeout(() => {
-        dispatch({ type: "RESET" });
-      }, AUTO_HIDE_DELAY);
+        dispatch(resetTransaction(undefined));
+      }, TIMING_CONSTANTS.AUTO_HIDE_SUCCESS);
 
       return () => clearTimeout(timer);
     }
-  }, [txFlow.phase]);
+  }, [txFlow.phase, dispatch]);
+
+  useEffect(() => {
+    if (refetchTrigger > 0) {
+      refetchBalance();
+    }
+  }, [refetchTrigger, refetchBalance]);
 
   const handleTransactionSuccess = useCallback(
     async (
@@ -160,25 +210,16 @@ const TransferCard = () => {
         (confirmedAt - submittedAt) / 1000
       );
 
-      console.log("Transaction completed:", {
-        submittedAt,
-        confirmedAt,
-        completionTimeSeconds,
-      });
-
-      toast.dismiss();
-
       if (receipt.status === "success") {
-        dispatch({
-          type: "CONFIRM_TRANSACTION",
-          payload: {
+        dispatch(
+          confirmTransaction({
             blockNumber: receipt.blockNumber,
             confirmedAt,
             completionTimeSeconds,
-          },
-        });
+          })
+        );
 
-        toast.success("Transfer successful!", {
+        syncedToast.success("Transfer successful!", {
           description: `Sent ${data.amount} ${
             selectedToken!.symbol
           } to ${data.recipient.slice(0, 6)}...${data.recipient.slice(-4)}`,
@@ -190,15 +231,18 @@ const TransferCard = () => {
           tokenAddress: selectedToken!.token_address,
         });
 
+        dispatch(resetForm());
+
         await refetchBalance();
+        dispatch(triggerBalanceRefetch());
       } else {
-        toast.error("Transaction failed", {
+        syncedToast.error("Transaction failed", {
           description: "The transaction was reverted",
         });
-        dispatch({ type: "RESET" });
+        dispatch(resetTransaction(undefined));
       }
     },
-    [selectedToken, reset, refetchBalance]
+    [selectedToken, reset, refetchBalance, dispatch, syncedToast]
   );
 
   const handleTransactionEstimate = useCallback(
@@ -210,82 +254,65 @@ const TransferCard = () => {
           chainId as CHAIN_ID
         );
         if (estimate) {
-          dispatch({
-            type: "UPDATE_ESTIMATE",
-            payload: estimate,
-          });
-          toast.loading("Transaction pending...", {
-            description: `Hash: ${truncateHash(
-              hash
-            )}\nEstimated time: ~${Math.floor(
-              estimate.estimatedWaitTime / 1000
-            )}s`,
-          });
-        } else {
-          toast.loading("Transaction pending...", {
-            description: `Hash: ${truncateHash(hash)}`,
-          });
+          dispatch(updateEstimate(estimate));
         }
-      } else {
-        toast.loading("Transaction pending...", {
-          description: `Hash: ${truncateHash(hash)}`,
-        });
       }
     },
-    [gasMetrics, chainId, estimateTransaction]
+    [gasMetrics, chainId, estimateTransaction, dispatch]
   );
 
   const handleError = useCallback(
     (error: Error & { message?: string }) => {
-      toast.dismiss();
-      dispatch({ type: "RESET" });
+      dispatch(resetTransaction(undefined));
 
       if (error?.message?.includes("User rejected")) {
-        toast.error("Transaction rejected", {
+        syncedToast.error("Transaction rejected", {
           description: "You rejected the transaction in your wallet",
         });
       } else if (error?.message?.includes("insufficient funds")) {
-        toast.error("Insufficient funds", {
+        syncedToast.error("Insufficient funds", {
           description: selectedToken?.native_token
             ? "You don't have enough balance to cover the transfer and gas fees"
             : "You don't have enough balance for this transfer or gas fees",
         });
       } else if (error?.message?.includes("gas")) {
-        toast.error("Gas estimation failed", {
+        syncedToast.error("Gas estimation failed", {
           description: "Unable to estimate gas for this transaction",
         });
       } else {
-        toast.error("Transfer failed", {
+        syncedToast.error("Transfer failed", {
           description: error?.message || "An unknown error occurred",
         });
       }
 
       console.error("Transfer error:", error);
     },
-    [selectedToken]
+    [selectedToken, dispatch, syncedToast]
   );
 
   const onSubmit = useCallback(
     async (data: TransferFormValues) => {
       if (!selectedToken) {
-        toast.error("No token selected");
+        syncedToast.error("No token selected");
         return;
       }
 
-      dispatch({ type: "START_SIGNING" });
+      dispatch(startSigning(undefined));
+
+      let initiatingToastId: string | undefined;
 
       try {
         const amountInWei = parseUnits(data.amount, selectedToken.decimals);
         let hash: `0x${string}`;
 
         if (selectedToken.native_token) {
-          toast.loading("Initiating Native Token transfer...");
+          initiatingToastId = syncedToast.loading("Initiating Native Token transfer...");
           hash = await sendTransaction(config, {
             to: data.recipient as `0x${string}`,
             value: amountInWei,
           });
         } else {
-          toast.loading("Initiating ERC20 Token transfer...");
+          initiatingToastId = syncedToast.loading("Initiating ERC20 Token transfer...");
           hash = await writeContract(config, {
             address: selectedToken.token_address,
             abi: erc20Abi,
@@ -294,30 +321,36 @@ const TransferCard = () => {
           });
         }
 
-        toast.dismiss();
+        if (initiatingToastId) {
+          syncedToast.dismiss(initiatingToastId);
+        }
 
         const submittedAt = Date.now();
 
-        dispatch({
-          type: "SUBMIT_TRANSACTION",
-          payload: {
+        dispatch(
+          submitTransaction({
             hash,
             submittedAt,
             amount: data.amount,
             recipient: data.recipient,
             tokenSymbol: selectedToken.symbol,
             isNativeToken: !!selectedToken.native_token,
-          },
-        });
+          })
+        );
 
         await handleTransactionEstimate(hash);
         await handleTransactionSuccess(hash, data, submittedAt);
       } catch (error) {
+        if (initiatingToastId) {
+          syncedToast.dismiss(initiatingToastId);
+        }
         handleError(error as Error);
       }
     },
     [
       selectedToken,
+      dispatch,
+      syncedToast,
       handleTransactionEstimate,
       handleTransactionSuccess,
       handleError,
@@ -418,15 +451,15 @@ const TransferCard = () => {
         )}
       </AnimatePresence>
 
-      {txFlow.phase === "pending" && txFlow.estimate && (
+      {txFlow.phase === "pending" && (
         <TransactionEstimation
-          estimate={txFlow.estimate}
+          estimate={txFlow.estimate || null}
           startTime={txFlow.submittedAt}
           blockNumber={blockNumber}
           status={liveStatus === "included" ? "included" : "pending"}
           networkCongestion={gasMetrics?.networkCongestion}
-          wasReplaced={wasReplaced}
-          currentHash={currentHash ?? undefined}
+          wasReplaced={txFlow.wasReplaced || false}
+          currentHash={txFlow.hash}
         />
       )}
 

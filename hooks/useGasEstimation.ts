@@ -1,15 +1,18 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useRef, useCallback, useEffect } from "react";
 import { erc20Abi, parseUnits } from "viem";
 import { useAccount, useBalance } from "wagmi";
 import { estimateGas, getPublicClient, getGasPrice } from "@wagmi/core";
 
 import type { CHAIN_ID, Token } from "@/types";
 import { calculateRequiredGasAmount } from "@/utils/utils";
-import { BIGINT_ZERO, GAS_CONSTANTS } from "@/utils/constants";
+import { BIGINT_ZERO, GAS_CONSTANTS } from "@/constants";
 import { config } from "@/config/wagmi";
+import { useAppDispatch } from "@/store/hooks";
+import { setGasError, setIsEstimating } from "@/store/slices/transferFormSlice";
 
 export const useGasEstimation = () => {
   const { address, chainId, isConnected } = useAccount();
+  const dispatch = useAppDispatch();
   const { data: balance } = useBalance({
     address,
     chainId: chainId as CHAIN_ID,
@@ -20,23 +23,21 @@ export const useGasEstimation = () => {
     [chainId]
   );
 
-  const [showGasError, setShowGasError] = useState(false);
-  const [isEstimating, setIsEstimating] = useState(false);
-  const [lastFailedAmount, setLastFailedAmount] = useState<bigint | null>(null);
+  const lastFailedAmountRef = useRef<bigint | null>(null);
 
   useEffect(() => {
     if (!isConnected) {
-      setShowGasError(false);
-      setIsEstimating(false);
-      setLastFailedAmount(null);
+      dispatch(setGasError(false));
+      dispatch(setIsEstimating(false));
+      lastFailedAmountRef.current = null;
     }
-  }, [isConnected]);
+  }, [isConnected, dispatch]);
 
   useEffect(() => {
-    setShowGasError(false);
-    setIsEstimating(false);
-    setLastFailedAmount(null);
-  }, [chainId]);
+    dispatch(setGasError(false));
+    dispatch(setIsEstimating(false));
+    lastFailedAmountRef.current = null;
+  }, [chainId, dispatch]);
 
   const getRequiredGasAmount = useCallback(
     async (
@@ -45,25 +46,31 @@ export const useGasEstimation = () => {
       to: `0x${string}`
     ): Promise<bigint> => {
       if (!address || !amountWei || Number(amountWei) === 0) {
-        setShowGasError(false);
-        setLastFailedAmount(null);
+        dispatch(setGasError(false));
+        lastFailedAmountRef.current = null;
         return BIGINT_ZERO;
       }
 
-      if (lastFailedAmount !== null && amountWei >= lastFailedAmount) {
-        setShowGasError(true);
+      if (
+        lastFailedAmountRef.current !== null &&
+        amountWei >= lastFailedAmountRef.current
+      ) {
+        dispatch(setGasError(true));
         return parseUnits(
           GAS_CONSTANTS.FALLBACK_RESERVE_NATIVE_TOKEN,
           GAS_CONSTANTS.NATIVE_TOKEN_DECIMALS
         );
       }
 
-      if (lastFailedAmount !== null && amountWei < lastFailedAmount) {
-        setLastFailedAmount(null);
+      if (
+        lastFailedAmountRef.current !== null &&
+        amountWei < lastFailedAmountRef.current
+      ) {
+        lastFailedAmountRef.current = null;
       }
 
-      setIsEstimating(true);
-      setShowGasError(false);
+      dispatch(setIsEstimating(true));
+      dispatch(setGasError(false));
 
       try {
         const gasPrice = await getGasPrice(config, {
@@ -108,33 +115,31 @@ export const useGasEstimation = () => {
           hasGasError = nativeTokenBalance < requiredGas;
         }
 
-        setShowGasError(hasGasError);
+        dispatch(setGasError(hasGasError));
 
         if (hasGasError) {
-          setLastFailedAmount(amountWei);
+          lastFailedAmountRef.current = amountWei;
         } else {
-          setLastFailedAmount(null);
+          lastFailedAmountRef.current = null;
         }
 
         return requiredGas;
       } catch (error) {
         console.error("Unexpected error estimating gas", error);
-        setShowGasError(true);
-        setLastFailedAmount(amountWei);
+        dispatch(setGasError(true));
+        lastFailedAmountRef.current = amountWei;
         return parseUnits(
           GAS_CONSTANTS.FALLBACK_RESERVE_NATIVE_TOKEN,
           GAS_CONSTANTS.NATIVE_TOKEN_DECIMALS
         );
       } finally {
-        setIsEstimating(false);
+        dispatch(setIsEstimating(false));
       }
     },
-    [address, chainId, client, balance, lastFailedAmount]
+    [address, chainId, client, balance?.value, dispatch]
   );
 
   return {
-    isEstimating,
-    showGasError,
     getRequiredGasAmount,
   };
 };

@@ -5,7 +5,7 @@ import { AiOutlineLoading3Quarters } from "react-icons/ai";
 
 import { type Token } from "@/types";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { PERCENTAGE_OPTIONS } from "@/utils/constants";
+import { PERCENTAGE_OPTIONS } from "@/constants";
 
 type PercentageButtonsProps = {
   selectedToken: Token | null;

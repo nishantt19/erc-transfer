@@ -5,7 +5,7 @@ import { IoCheckmark, IoCopy, IoOpenOutline } from "react-icons/io5";
 import { getTransactionUrl } from "@/utils/blockExplorer";
 import { CHAIN_ID } from "@/types";
 import { formatSeconds, truncateHash } from "@/utils/utils";
-import { COPY_RESET_DELAY } from "@/utils/constants";
+import { TIMING_CONSTANTS } from "@/constants";
 import { Tooltip } from "../ui/Tooltip";
 
 interface TransactionSuccessProps {
@@ -40,7 +40,7 @@ export const TransactionSuccess = ({
     try {
       await navigator.clipboard.writeText(hash);
       setCopied(true);
-      setTimeout(() => setCopied(false), COPY_RESET_DELAY);
+      setTimeout(() => setCopied(false), TIMING_CONSTANTS.COPY_RESET_DELAY);
     } catch (err) {
       console.error("Failed to copy:", err);
     }

@@ -1,5 +1,5 @@
 import { http } from "viem";
-import { CHAIN_CONFIG } from "@/utils/constants";
+import { CHAIN_CONFIG } from "@/constants";
 
 export const getAlchemyTransport = (chainId: number) => {
   const slug = CHAIN_CONFIG[chainId].ALCHEMY_SLUG;

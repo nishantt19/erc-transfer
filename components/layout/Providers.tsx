@@ -3,9 +3,11 @@ import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
 import { RainbowKitProvider, Theme } from "@rainbow-me/rainbowkit";
+import { Provider as ReduxProvider } from "react-redux";
 import { Toaster } from "sonner";
 
 import { config } from "@/config/wagmi";
+import { store } from "@/store";
 
 type ProviderProps = {
   children: React.ReactNode;
@@ -71,14 +73,16 @@ const customTheme: Theme = {
 
 const Providers = ({ children }: ProviderProps) => {
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={customTheme}>
-          <Toaster position="top-center" richColors />
-          {children}
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ReduxProvider store={store}>
+      <WagmiProvider config={config}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitProvider theme={customTheme}>
+            <Toaster position="top-center" richColors />
+            {children}
+          </RainbowKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ReduxProvider>
   );
 };
 

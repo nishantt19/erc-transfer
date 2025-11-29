@@ -5,7 +5,7 @@ import { Coin1, SearchNormal1, Clock } from "iconsax-react";
 
 import { type Token } from "@/types";
 import { truncateAddress, isTestnetChain, formatBalance } from "@/utils/utils";
-import { CHAIN_CONFIG } from "@/utils/constants";
+import { CHAIN_CONFIG } from "@/constants";
 import { useWalletTokens, useTokenSearch, useRecentSearches } from "@/hooks";
 
 import ShimmerAnimation from "@/components/ui/ShimmerAnimation";

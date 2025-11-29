@@ -11,7 +11,7 @@ import {
 import type { TransactionEstimate } from "@/types";
 import { formatSeconds, truncateHash } from "@/utils/utils";
 import { GAS_TIER_LABELS } from "@/utils/gasCalculations";
-import { COPY_RESET_DELAY } from "@/utils/constants";
+import { TIMING_CONSTANTS } from "@/constants";
 import { Tooltip } from "../ui/Tooltip";
 
 interface TransactionEstimationProps {
@@ -52,7 +52,7 @@ export const TransactionEstimation = ({
   const congestionLabel = getCongestionLabel(congestionLevel);
 
   const statusText = wasReplaced
-    ? "Transaction Sped Up"
+    ? "Sped Up - Waiting for Confirmations"
     : status === "pending"
     ? "Pending in mempool"
     : "Waiting for confirmations";
@@ -80,7 +80,7 @@ export const TransactionEstimation = ({
     try {
       await navigator.clipboard.writeText(currentHash);
       setCopied(true);
-      setTimeout(() => setCopied(false), COPY_RESET_DELAY);
+      setTimeout(() => setCopied(false), TIMING_CONSTANTS.COPY_RESET_DELAY);
     } catch (err) {
       console.error("Failed to copy:", err);
     }

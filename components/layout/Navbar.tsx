@@ -24,7 +24,7 @@ const Navbar = () => {
             </p>
           </div>
         </div>
-        {/* Theme toggle and Connect Button */}
+        {/* Connect Button */}
         <div className="flex gap-x-3 items-center">
           <ConnectButton showBalance={false} />
         </div>

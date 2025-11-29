@@ -12,7 +12,7 @@ import { ArrowDown2 } from "iconsax-react";
 import { formatUnits } from "viem";
 
 import { computeMaxNativeInput, isTestnetChain } from "@/utils/utils";
-import { CHAIN_CONFIG } from "@/utils/constants";
+import { CHAIN_CONFIG } from "@/constants";
 import { type Token } from "@/types";
 import { useGasEstimation, useTokenBalance, useWalletTokens } from "@/hooks";
 

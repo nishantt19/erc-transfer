@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { formatGwei } from "viem";
+
 import type { InfuraGasResponse, TransactionEstimate, CHAIN_ID } from "@/types";
 import { fetchTransactionWithRetry } from "@/utils/transactionHelpers";
 import { detectGasTier } from "@/utils/gasCalculations";
@@ -32,16 +32,6 @@ export const useTransactionEstimation = () => {
 
         const gasLimit = transaction.gas;
         const estimatedGasCost = gasLimit * actualMaxFee;
-
-        console.log("Transaction Estimation:", {
-          tier,
-          estimatedWaitTime: `${estimatedWaitTime / 1000}s`,
-          maxPriorityFeePerGas: formatGwei(actualMaxPriorityFee),
-          maxFeePerGas: formatGwei(actualMaxFee),
-          gasLimit: gasLimit.toString(),
-          estimatedGasCost: estimatedGasCost.toString(),
-          networkCongestion: gasMetrics.networkCongestion,
-        });
 
         return {
           tier,

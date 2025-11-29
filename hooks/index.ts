@@ -8,6 +8,7 @@ import { useTransferForm } from "./useTransferForm";
 import { useWalletTokens } from "./useWalletTokens";
 import { useTokenSearch } from "./useTokenSearch";
 import { useRecentSearches } from "./useRecentSearches";
+import { useToastSync } from "./useToastSync";
 
 export {
   useGasEstimation,
@@ -20,4 +21,5 @@ export {
   useWalletTokens,
   useTokenSearch,
   useRecentSearches,
+  useToastSync,
 };

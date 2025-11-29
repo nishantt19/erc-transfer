@@ -4,7 +4,7 @@ import { type Address, isAddress, erc20Abi } from "viem";
 import { useQuery } from "@tanstack/react-query";
 import { type Token } from "@/types";
 import { formatBalance, isTestnetChain } from "@/utils/utils";
-import { CHAIN_CONFIG } from "@/utils/constants";
+import { CHAIN_CONFIG } from "@/constants";
 
 type TokenSearchResult = {
   token: Token | null;
