@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useCallback } from "react";
 import { formatUnits, erc20Abi } from "viem";
 import { useAccount, useReadContract, useBalance } from "wagmi";
 import { type Token } from "@/types";
@@ -27,31 +27,23 @@ export const useTokenBalance = (token: Token | null, amount?: string) => {
       },
     });
 
-  const balanceInWei = useMemo(() => {
-    if (!token) return "0";
-    if (token.native_token) return nativeBalanceData?.value.toString() ?? "0";
-    return erc20BalanceData?.toString() ?? "0";
-  }, [token, nativeBalanceData, erc20BalanceData]);
+  const balanceInWei = !token
+    ? "0"
+    : token.native_token
+    ? nativeBalanceData?.value.toString() ?? "0"
+    : erc20BalanceData?.toString() ?? "0";
 
-  const balance = useMemo(
-    () => (token ? formatUnits(BigInt(balanceInWei), token.decimals) : "0"),
-    [token, balanceInWei]
-  );
+  const balance = token ? formatUnits(BigInt(balanceInWei), token.decimals) : "0";
 
-  const formattedBalance = useMemo(
-    () => (token ? parseFloat(formatBalance(balanceInWei, token.decimals)) : 0),
-    [token, balanceInWei]
-  );
+  const formattedBalance = token
+    ? parseFloat(formatBalance(balanceInWei, token.decimals))
+    : 0;
 
-  const usdValue = useMemo(
-    () => (token && amount ? calculateUsdValue(amount, token) : "0.00"),
-    [token, amount]
-  );
+  const usdValue =
+    token && amount ? calculateUsdValue(amount, token) : "0.00";
 
-  const isInsufficientBalance = useMemo(() => {
-    if (!amount || !token) return false;
-    return parseFloat(amount) > parseFloat(balance);
-  }, [amount, balance, token]);
+  const isInsufficientBalance =
+    !amount || !token ? false : parseFloat(amount) > parseFloat(balance);
 
   const refetchBalance = useCallback(async () => {
     if (!token) return;

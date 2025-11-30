@@ -2,6 +2,7 @@ import { type Token } from "@/types";
 import { parseUnits, formatUnits, type Address, type Hash } from "viem";
 import { BIGINT_ZERO, GAS_CONSTANTS, TESTNET_CHAIN_IDS } from "@/constants";
 
+// Predefined hue values for consistent token avatar color generation
 const COLORS = [
   { h: 262 },
   { h: 217 },
@@ -22,6 +23,10 @@ const hashStringToNumber = (str: string): number => {
   return Math.abs(hash);
 };
 
+/**
+ * Generates deterministic color pair from string
+ * Same input always produces same colors for visual consistency
+ */
 export const stringToColorPair = (
   str: string
 ): { bg: string; text: string } => {
@@ -62,6 +67,10 @@ export const calculateUsdValue = (
   return (Number(amount) * Number(selectedToken.usd_price)).toFixed(2);
 };
 
+/**
+ * Calculates total gas required with safety buffer
+ * Uses either percentage buffer or minimum buffer, whichever is larger
+ */
 export const calculateRequiredGasAmount = (
   gasEstimate: bigint,
   gasPrice: bigint
@@ -78,6 +87,10 @@ export const calculateRequiredGasAmount = (
   );
 };
 
+/**
+ * Computes maximum native token that can be sent
+ * Reserves gas amount from total balance
+ */
 export const computeMaxNativeInput = (
   balance: bigint,
   gasAmount: bigint

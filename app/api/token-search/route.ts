@@ -3,6 +3,10 @@ import axios from "axios";
 import { type Address, isAddress } from "viem";
 import type { MoralisTokenPriceResponse, Token } from "@/types";
 
+/**
+ * Searches for ERC20 token by contract address using Moralis API
+ * Returns token metadata including name, symbol, logo, decimals, and current price
+ */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const tokenAddress = searchParams.get("tokenAddress");

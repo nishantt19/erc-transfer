@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import axios from "axios";
 import { type API_RESPONSE } from "@/types";
 
+/**
+ * Fetches all tokens (including native token) for a wallet address
+ */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const address = searchParams.get("address");
@@ -18,6 +21,7 @@ export async function GET(req: Request) {
     const response = await axios.get<API_RESPONSE>(
       `https://deep-index.moralis.io/api/v2.2/wallets/${address}/tokens`,
       {
+        // excludes tokens with no activity in last 60 days
         params: { chain, max_token_inactivity: 60 },
         headers: {
           accept: "application/json",

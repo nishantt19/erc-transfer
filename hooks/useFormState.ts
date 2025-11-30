@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setSelectedToken, setAmount } from "@/store/slices/transferFormSlice";
+import { setTokenAndResetAmount } from "@/store/slices/transferFormSlice";
 import {
   type TransferFormValues,
   transferSchema,
@@ -54,17 +54,13 @@ export const useFormState = ({
 
   const handleTokenSelect = useCallback(
     (newToken: Token) => {
-      if (selectedToken?.token_address !== newToken.token_address) {
-        form.setValue("amount", "", { shouldValidate: false });
-        dispatch(setAmount(""));
-      }
-
-      dispatch(setSelectedToken(newToken));
+      dispatch(setTokenAndResetAmount(newToken));
+      form.setValue("amount", "", { shouldValidate: false });
       form.setValue("tokenAddress", newToken.token_address, {
         shouldValidate: true,
       });
     },
-    [form, dispatch, selectedToken]
+    [form, dispatch]
   );
 
   return {

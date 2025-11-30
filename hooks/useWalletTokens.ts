@@ -25,7 +25,6 @@ export const useWalletTokens = () => {
     queryKey: ["walletTokens", address, chain],
     queryFn: () => fetchWalletTokens(address!, chain!),
     enabled: !!address && !!chain && isConnected,
-    refetchOnWindowFocus: true,
     staleTime: TIMING_CONSTANTS.TOKEN_STALE_TIME,
   });
 

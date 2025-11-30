@@ -26,6 +26,24 @@ interface TransactionEstimationProps {
 
 const UPDATE_INTERVAL = 1000;
 
+const STATUS_STYLES = {
+  replaced: {
+    border: "border-purple-500/50",
+    textColor: "text-purple-500",
+    dotBg: "bg-purple-500",
+  },
+  pending: {
+    border: "border-warning/50",
+    textColor: "text-warning",
+    dotBg: "bg-warning",
+  },
+  included: {
+    border: "border-accent-blue/50",
+    textColor: "text-accent-blue",
+    dotBg: "bg-accent-blue",
+  },
+} as const;
+
 export const TransactionEstimation = ({
   estimate,
   startTime,
@@ -58,22 +76,10 @@ export const TransactionEstimation = ({
     : "Waiting for confirmations";
 
   const statusStyles = wasReplaced
-    ? {
-        border: "border-purple-500/50",
-        textColor: "text-purple-500",
-        dotBg: "bg-purple-500",
-      }
+    ? STATUS_STYLES.replaced
     : status === "pending"
-    ? {
-        border: "border-warning/50",
-        textColor: "text-warning",
-        dotBg: "bg-warning",
-      }
-    : {
-        border: "border-accent-blue/50",
-        textColor: "text-accent-blue",
-        dotBg: "bg-accent-blue",
-      };
+    ? STATUS_STYLES.pending
+    : STATUS_STYLES.included;
 
   const handleCopy = async () => {
     if (!currentHash) return;

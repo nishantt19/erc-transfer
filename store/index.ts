@@ -10,6 +10,10 @@ import transactionReducer from "./slices/transactionSlice";
 import toastReducer from "./slices/toastSlice";
 import { TIMING_CONSTANTS, IS_BROWSER } from "@/constants";
 
+/**
+ * Custom serializers for bigint values in Redux state
+ * Required because JSON.stringify doesn't support bigint natively
+ */
 const bigIntReplacer = (_key: string, value: any): any => {
   if (typeof value === "bigint") {
     return { __type: "bigint", value: value.toString() };
@@ -24,6 +28,10 @@ const bigIntReviver = (_key: string, value: any): any => {
   return value;
 };
 
+/**
+ * Loads Redux state from localStorage on app initialization
+ * Filters expired toasts and removes wallet context to prevent stale data
+ */
 const loadState = () => {
   try {
     if (!IS_BROWSER) return undefined;
@@ -32,6 +40,7 @@ const loadState = () => {
 
     const parsedState = JSON.parse(serializedState, bigIntReviver);
 
+    // Remove expired toast messages
     if (parsedState.toast?.messages) {
       const now = Date.now();
       parsedState.toast.messages = parsedState.toast.messages.filter(
@@ -39,6 +48,7 @@ const loadState = () => {
       );
     }
 
+    // Remove wallet context - will be validated separately
     if (parsedState._walletContext) {
       delete parsedState._walletContext;
     }
@@ -102,11 +112,16 @@ const throttle = <T extends (...args: any[]) => void>(
   };
 };
 
+/**
+ * Redux state sync configuration for cross-tab communication
+ * Syncs form and transaction state across browser tabs
+ */
 const syncConfig = {
   whitelist: [
     "transferForm/setSelectedToken",
     "transferForm/setAmount",
     "transferForm/setRecipient",
+    "transferForm/setTokenAndResetAmount",
     "transferForm/resetForm",
     "transferForm/triggerBalanceRefetch",
     "transferForm/setGasError",
@@ -141,6 +156,7 @@ export const store = configureStore({
   preloadedState: loadState(),
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
+      // Ignore bigint serialization warnings for blockchain data
       serializableCheck: {
         ignoredActions: [
           "@@INIT",
@@ -181,6 +197,7 @@ export const getPersistedWalletContext = ():
   }
 };
 
+// Throttle localStorage writes to prevent excessive I/O
 const throttledSaveState = throttle(
   (state: RootState, context: { address?: string; chainId?: number }) => {
     saveState(state, context);
@@ -188,6 +205,7 @@ const throttledSaveState = throttle(
   TIMING_CONSTANTS.LOCALSTORAGE_SAVE_THROTTLE
 );
 
+// Initialize cross-tab state sync and localStorage persistence
 if (IS_BROWSER) {
   initMessageListener(store);
 

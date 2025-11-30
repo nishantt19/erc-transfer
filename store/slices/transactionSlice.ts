@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { TransactionFlow, TransactionEstimate } from "@/types";
 
+// Represents the transaction state machine
 const initialState: TransactionFlow = { phase: "idle" };
 
 export const transactionSlice = createSlice({
@@ -11,6 +12,7 @@ export const transactionSlice = createSlice({
     startSigning: () => {
       return { phase: "signing" } as TransactionFlow;
     },
+    // Set transaction as submitted and mark it as pending
     submitTransaction: (
       _state,
       action: PayloadAction<{
@@ -25,10 +27,11 @@ export const transactionSlice = createSlice({
       return {
         phase: "pending",
         ...action.payload,
-        estimate: null,
-        wasReplaced: false,
+        estimate: null, // Real estimate will be filled once gas calc finishes
+        wasReplaced: false, // Indicates whether tx was replaced via speedup/cancel
       } as TransactionFlow;
     },
+    // Update gas estimate for pending transaction
     updateEstimate: (state, action: PayloadAction<TransactionEstimate>) => {
       if (state.phase === "pending") {
         return {
@@ -45,6 +48,7 @@ export const transactionSlice = createSlice({
       }
       return state;
     },
+    // Handle transaction replacement (speedup or cancel)
     replaceTransaction: (
       state,
       action: PayloadAction<{ newHash: `0x${string}` }>
@@ -52,7 +56,7 @@ export const transactionSlice = createSlice({
       if (state.phase === "pending") {
         return {
           phase: "pending",
-          hash: action.payload.newHash,
+          hash: action.payload.newHash, // Update to new hash
           submittedAt: state.submittedAt,
           amount: state.amount,
           recipient: state.recipient,
@@ -64,6 +68,7 @@ export const transactionSlice = createSlice({
       }
       return state;
     },
+    // Transaction has been included in a block
     confirmTransaction: (
       state,
       action: PayloadAction<{
@@ -87,7 +92,9 @@ export const transactionSlice = createSlice({
       }
       return state;
     },
+    // Reset transaction state to initial idle state
     resetTransaction: () => initialState,
+    // Clear pending transaction if wallet/chain context changed to prevent stale data
     validateTransactionAndClearIfNeeded: (
       state,
       action: PayloadAction<{
@@ -98,6 +105,7 @@ export const transactionSlice = createSlice({
     ) => {
       const { address, chainId, persistedContext } = action.payload;
 
+      // If context is missing, keep existing state as-is
       if (
         !persistedContext ||
         !persistedContext.address ||
@@ -106,6 +114,7 @@ export const transactionSlice = createSlice({
         return state;
       }
 
+      // Clear transaction if address or chainId changed
       if (
         persistedContext.address !== address ||
         persistedContext.chainId !== chainId

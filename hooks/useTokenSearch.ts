@@ -21,25 +21,34 @@ export const useTokenSearch = (
 ): TokenSearchResult => {
   const { address: walletAddress } = useAccount();
   const chainId = useChainId();
-  const [isManualSearch, setIsManualSearch] = useState(false);
+
+  // Debounce user input to avoid unnecessary RPC/API calls
   const [debouncedAddress, setDebouncedAddress] = useState("");
 
   const isTestnet = isTestnetChain(chainId);
-  const chain = useMemo(() => CHAIN_CONFIG[chainId].MORALIS_ID, [chainId]);
+
+  const chain = CHAIN_CONFIG[chainId]?.MORALIS_ID;
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedAddress(searchAddress);
-    }, DEBOUNCE_DELAY);
+    const trimmed = searchAddress.trim();
+
+    const timer = setTimeout(
+      () => {
+        setDebouncedAddress(trimmed);
+      },
+      trimmed ? DEBOUNCE_DELAY : 0
+    );
 
     return () => clearTimeout(timer);
   }, [searchAddress]);
 
-  const validAddress = useMemo(() => {
-    if (!debouncedAddress || !isAddress(debouncedAddress)) return null;
-    return debouncedAddress as Address;
-  }, [debouncedAddress]);
+  // Validate only when debounced to reduce overhead
+  const validAddress: Address | null =
+    debouncedAddress && isAddress(debouncedAddress)
+      ? (debouncedAddress as Address)
+      : null;
 
+  // If token already exists in local list, skip external fetches
   const existingToken = useMemo(() => {
     if (!validAddress || !existingTokens.length) return null;
     return (
@@ -49,11 +58,10 @@ export const useTokenSearch = (
     );
   }, [validAddress, existingTokens]);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsManualSearch(!!validAddress && !existingToken);
-  }, [validAddress, existingToken]);
+  // Indicates whether user provided a valid address that's not in existing tokens
+  const isManualSearch = !!validAddress && !existingToken;
 
+  // Mainnet: fetch metadata from API first
   const {
     data: apiData,
     isLoading: isApiLoading,
@@ -76,32 +84,32 @@ export const useTokenSearch = (
     staleTime: 60000,
   });
 
+  const contractConfig = validAddress
+    ? { address: validAddress, abi: erc20Abi }
+    : null;
+
+  // Testnet/fallback: fetch all metadata from contract; Mainnet: only fetch balance
   const { data: contractData, isLoading: isContractLoading } = useReadContracts(
     {
-      contracts: validAddress
-        ? [
-            {
-              address: validAddress,
-              abi: erc20Abi,
-              functionName: "name",
-            },
-            {
-              address: validAddress,
-              abi: erc20Abi,
-              functionName: "symbol",
-            },
-            {
-              address: validAddress,
-              abi: erc20Abi,
-              functionName: "decimals",
-            },
-            {
-              address: validAddress,
-              abi: erc20Abi,
-              functionName: "balanceOf",
-              args: walletAddress ? [walletAddress] : undefined,
-            },
-          ]
+      contracts: contractConfig
+        ? isTestnet || isApiError
+          ? [
+              { ...contractConfig, functionName: "name" },
+              { ...contractConfig, functionName: "symbol" },
+              { ...contractConfig, functionName: "decimals" },
+              {
+                ...contractConfig,
+                functionName: "balanceOf",
+                args: walletAddress ? [walletAddress] : undefined,
+              },
+            ]
+          : [
+              {
+                ...contractConfig,
+                functionName: "balanceOf",
+                args: walletAddress ? [walletAddress] : undefined,
+              },
+            ]
         : undefined,
       query: {
         enabled: !!validAddress && !!walletAddress && !existingToken,
@@ -109,15 +117,17 @@ export const useTokenSearch = (
     }
   );
 
+  // Consolidate token data from API and/or contract reads
   const token = useMemo((): Token | null => {
     if (existingToken) return existingToken;
 
     if (!validAddress) return null;
 
+    // Mainnet + API success: combine API metadata with balance
     if (!isTestnet && apiData && contractData) {
-      const [, , , balanceResult] = contractData;
+      const balanceResult = contractData[0];
 
-      if (balanceResult.status === "failure") {
+      if (!balanceResult || balanceResult.status === "failure") {
         return null;
       }
 
@@ -137,11 +147,20 @@ export const useTokenSearch = (
       };
     }
 
-    if (isTestnet && contractData) {
+    // Testnet or API failure: use contract data entirely
+    if (
+      (isTestnet || isApiError) &&
+      contractData &&
+      contractData.length === 4
+    ) {
       const [nameResult, symbolResult, decimalsResult, balanceResult] =
         contractData;
 
       if (
+        !nameResult ||
+        !symbolResult ||
+        !decimalsResult ||
+        !balanceResult ||
         nameResult.status === "failure" ||
         symbolResult.status === "failure" ||
         decimalsResult.status === "failure" ||
@@ -170,27 +189,26 @@ export const useTokenSearch = (
     }
 
     return null;
-  }, [validAddress, existingToken, apiData, contractData, isTestnet]);
+  }, [
+    validAddress,
+    existingToken,
+    apiData,
+    contractData,
+    isTestnet,
+    isApiError,
+  ]);
 
-  const isLoading = useMemo(() => {
-    if (!validAddress || existingToken) return false;
+  // Determine loading and error states
+  const isLoading =
+    !!validAddress &&
+    !existingToken &&
+    (!isTestnet ? isApiLoading || isContractLoading : isContractLoading);
 
-    if (!isTestnet) {
-      return isApiLoading || isContractLoading;
-    }
-
-    return isContractLoading;
-  }, [validAddress, existingToken, isTestnet, isApiLoading, isContractLoading]);
-
-  const isError = useMemo(() => {
-    if (!validAddress || existingToken) return false;
-
-    if (!isTestnet) {
-      return isApiError || (!isLoading && !token && !!validAddress);
-    }
-
-    return !isLoading && !token && !!validAddress;
-  }, [validAddress, existingToken, isTestnet, isApiError, isLoading, token]);
+  const isError =
+    !!validAddress &&
+    !existingToken &&
+    !isLoading &&
+    (isTestnet ? !token : isApiError || !token);
 
   return {
     token,

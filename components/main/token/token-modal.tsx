@@ -1,7 +1,8 @@
 "use client";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAccount, useChainId } from "wagmi";
 import { Coin1, SearchNormal1, Clock } from "iconsax-react";
+import { isAddress } from "viem";
 
 import { type Token } from "@/types";
 import { truncateAddress, isTestnetChain, formatBalance } from "@/utils/utils";
@@ -40,6 +41,12 @@ export default function TokenSelectModal({
   const chainLogo = CHAIN_CONFIG[chainId].LOGO;
   const chainName = CHAIN_CONFIG[chainId].NAME;
   const isTestnet = isTestnetChain(chainId);
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      setSearchInput("");
+    });
+  }, [chainId]);
 
   const handleTokenSelect = useCallback(
     (token: Token, fromManualSearch: boolean = false) => {
@@ -134,9 +141,13 @@ export default function TokenSelectModal({
             </div>
           ) : showSearchResult ? (
             <>
-              {isSearchLoading ? (
+              {!isAddress(searchInput.trim()) ? (
+                <div className="text-center py-8 text-secondary">
+                  Enter a valid contract address
+                </div>
+              ) : isSearchLoading ? (
                 <ShimmerAnimation showBalance />
-              ) : isSearchError || !searchedToken ? (
+              ) : isSearchError ? (
                 <div className="text-center py-8 space-y-1">
                   <div className="text-foreground font-medium">
                     Token Not Found
@@ -145,9 +156,9 @@ export default function TokenSelectModal({
                     No valid ERC-20 token exists at this address on {chainName}
                   </div>
                 </div>
-              ) : (
+              ) : searchedToken ? (
                 <>{renderTokenItem(searchedToken, isManualSearch)}</>
-              )}
+              ) : null}
             </>
           ) : (
             <>

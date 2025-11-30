@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import axios from "axios";
 import { type InfuraGasResponse } from "@/types";
 
+/**
+ * Fetches real-time gas metrics from Infura Gas API
+ * Returns low/medium/high gas price estimates and network congestion data
+ */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const chainId = searchParams.get("chainId");

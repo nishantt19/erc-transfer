@@ -7,6 +7,10 @@ import {
   dismissAllToasts,
 } from "@/store/slices/toastSlice";
 
+/**
+ * Syncs Redux toast state with Sonner toast library
+ * Ensures toasts persist across hot reloads and prevents duplicates
+ */
 export const useToastSync = () => {
   const dispatch = useAppDispatch();
   const toastMessages = useAppSelector((state) => state.toast.messages);
@@ -15,15 +19,21 @@ export const useToastSync = () => {
     (state) => state.toast.dismissedToastIds
   );
   const loadingToastId = useAppSelector((state) => state.toast.loadingToastId);
+
+  // Track processed toasts to prevent duplicates
   const processedToastsRef = useRef<Set<string>>(new Set());
   const isInitialMountRef = useRef(true);
 
+  // On initial mount, rehydrate toasts from Redux state
   useEffect(() => {
     if (isInitialMountRef.current && toastMessages.length > 0) {
       isInitialMountRef.current = false;
 
       toastMessages.forEach((toastMsg) => {
-        if (!dismissedToastIds.includes(toastMsg.id) && !processedToastsRef.current.has(toastMsg.id)) {
+        if (
+          !dismissedToastIds.includes(toastMsg.id) &&
+          !processedToastsRef.current.has(toastMsg.id)
+        ) {
           processedToastsRef.current.add(toastMsg.id);
 
           const toastFn = toast[toastMsg.type] || toast;
@@ -36,6 +46,7 @@ export const useToastSync = () => {
     }
   }, [toastMessages, dismissedToastIds]);
 
+  // Sync dismiss actions from Redux to Sonner
   useEffect(() => {
     if (dismissedToastIds && dismissedToastIds.length > 0) {
       dismissedToastIds.forEach((toastId) => {
@@ -44,15 +55,16 @@ export const useToastSync = () => {
     }
   }, [dismissedToastIds]);
 
+  // Handle new toasts added to Redux state
   useEffect(() => {
     if (isInitialMountRef.current) return;
 
     if (!activeToastId) return;
 
+    if (processedToastsRef.current.has(activeToastId)) return;
+
     const latestToast = toastMessages.find((t) => t.id === activeToastId);
     if (!latestToast) return;
-
-    if (processedToastsRef.current.has(latestToast.id)) return;
 
     processedToastsRef.current.add(latestToast.id);
 
@@ -62,11 +74,12 @@ export const useToastSync = () => {
       id: latestToast.id,
     });
 
+    // Memory cleanup - keep only last 20 processed toast IDs
     if (processedToastsRef.current.size > 20) {
       const toastsArray = Array.from(processedToastsRef.current);
       processedToastsRef.current = new Set(toastsArray.slice(-20));
     }
-  }, [toastMessages, activeToastId]);
+  }, [activeToastId, toastMessages]);
 
   const syncedToast = {
     success: (message: string, options?: { description?: string }) => {

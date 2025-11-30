@@ -1,6 +1,6 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-export type ToastType = 'success' | 'error' | 'info' | 'loading';
+export type ToastType = "success" | "error" | "info" | "loading";
 
 export interface ToastMessage {
   id: string;
@@ -13,8 +13,8 @@ export interface ToastMessage {
 interface ToastState {
   messages: ToastMessage[];
   activeToastId: string | null;
-  dismissedToastIds: string[];
-  loadingToastId: string | null;
+  dismissedToastIds: string[]; // Keep track of dismissed toasts to prevent re-showing
+  loadingToastId: string | null; // Track current loading toast
 }
 
 const initialState: ToastState = {
@@ -25,7 +25,7 @@ const initialState: ToastState = {
 };
 
 export const toastSlice = createSlice({
-  name: 'toast',
+  name: "toast",
   initialState,
   reducers: {
     showToast: (
@@ -40,9 +40,12 @@ export const toastSlice = createSlice({
       const { id, type, message, description } = action.payload;
       const timestamp = Date.now();
 
+      // Auto-dismiss previous loading toast when showing new toast
       if (state.loadingToastId && state.loadingToastId !== id) {
         const previousLoadingId = state.loadingToastId;
-        state.messages = state.messages.filter((t) => t.id !== previousLoadingId);
+        state.messages = state.messages.filter(
+          (t) => t.id !== previousLoadingId
+        );
 
         if (!state.dismissedToastIds.includes(previousLoadingId)) {
           state.dismissedToastIds.push(previousLoadingId);
@@ -51,8 +54,10 @@ export const toastSlice = createSlice({
         state.loadingToastId = null;
       }
 
+      // Remove existing toast with same ID to prevent duplicates
       state.messages = state.messages.filter((t) => t.id !== id);
 
+      // Add new toast message
       state.messages.push({
         id,
         type,
@@ -63,12 +68,14 @@ export const toastSlice = createSlice({
 
       state.activeToastId = id;
 
-      if (type === 'loading') {
+      // Track active loading toast ID
+      if (type === "loading") {
         state.loadingToastId = id;
       }
     },
     dismissToast: (state, action: PayloadAction<string>) => {
       const toastId = action.payload;
+      // Remove toast from visible list
       state.messages = state.messages.filter((t) => t.id !== toastId);
 
       if (!state.dismissedToastIds.includes(toastId)) {
@@ -79,6 +86,7 @@ export const toastSlice = createSlice({
         state.dismissedToastIds = state.dismissedToastIds.slice(-50);
       }
 
+      // Clear references if dismissing active/loading toast
       if (state.activeToastId === toastId) {
         state.activeToastId = null;
       }
@@ -88,6 +96,7 @@ export const toastSlice = createSlice({
       }
     },
     dismissAllToasts: (state) => {
+      // Mark all current toasts as dismissed
       state.messages.forEach((t) => {
         if (!state.dismissedToastIds.includes(t.id)) {
           state.dismissedToastIds.push(t.id);
